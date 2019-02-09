@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Budry/prometheus-simple-docker-exporter/src/uitls"
+	"github.com/Budry/prometheus-simple-docker-exporter/src/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/prometheus/client_golang/prometheus"
@@ -63,7 +63,7 @@ func (exporter *DockerStatsCollector) Collect(ch chan<- prometheus.Metric) {
 
 		ch <- prometheus.MustNewConstMetric(memoryUsage, prometheus.GaugeValue, float64(s.MemoryStats.Usage), container.ID, container.Names[0], container.Labels["com.docker.compose.project"])
 		ch <- prometheus.MustNewConstMetric(memoryLimit, prometheus.GaugeValue, float64(s.MemoryStats.Limit), container.ID, container.Names[0], container.Labels["com.docker.compose.project"])
-		ch <- prometheus.MustNewConstMetric(cpuUsagePercent, prometheus.GaugeValue, uitls.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats), container.ID, container.Names[0], container.Labels["com.docker.compose.project"])
+		ch <- prometheus.MustNewConstMetric(cpuUsagePercent, prometheus.GaugeValue, utils.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats), container.ID, container.Names[0], container.Labels["com.docker.compose.project"])
 	}
 }
 
