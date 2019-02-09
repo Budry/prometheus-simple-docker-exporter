@@ -48,7 +48,7 @@ func update(wg *sync.WaitGroup) {
 
 	fmt.Println("Start")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -91,12 +91,6 @@ func update(wg *sync.WaitGroup) {
 				}
 			}
 		}(container)
-
-		//json.NewDecoder(stats.Body).Decode(s)
-
-		//memoryUsage.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Usage))
-		//memoryLimit.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Limit))
-		//cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(utils.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
 	}
 }
 
