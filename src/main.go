@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/Budry/prometheus-simple-docker-exporter/src/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -46,8 +45,6 @@ func init() {
 
 func update(wg *sync.WaitGroup) {
 
-	fmt.Println("Start")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 
 	cli, err := client.NewEnvClient()
@@ -76,7 +73,6 @@ func update(wg *sync.WaitGroup) {
 				case <-ctx.Done():
 					stats.Body.Close()
 					wg.Done()
-					fmt.Println("Stop logging")
 					return
 				default:
 					if err := json.NewDecoder(stats.Body).Decode(&s); err == io.EOF {
@@ -87,7 +83,6 @@ func update(wg *sync.WaitGroup) {
 					memoryUsage.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Usage))
 					memoryLimit.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Limit))
 					cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(utils.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
-					fmt.Println(container.ID, s.CPUStats.CPUUsage.TotalUsage)
 				}
 			}
 		}(container)
