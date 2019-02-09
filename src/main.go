@@ -10,6 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io"
 	"net/http"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -37,6 +39,15 @@ var (
 	)
 )
 
+func GetRefreshRate() time.Duration {
+	i, err := strconv.Atoi(os.Getenv("REFRESH_RATE"))
+	if err != nil {
+		panic(err)
+	}
+
+	return time.Duration(i)
+}
+
 func init() {
 	prometheus.MustRegister(memoryUsage)
 	prometheus.MustRegister(memoryLimit)
@@ -45,7 +56,7 @@ func init() {
 
 func update(wg *sync.WaitGroup) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), GetRefreshRate() * time.Hour)
 
 	cli, err := client.NewEnvClient()
 	if err != nil {
