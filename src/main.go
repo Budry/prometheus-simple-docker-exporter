@@ -11,6 +11,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io"
 	"net/http"
+	"sync"
+	"time"
 )
 
 var (
@@ -41,57 +43,74 @@ func init() {
 	prometheus.MustRegister(memoryLimit)
 	prometheus.MustRegister(cpuUsagePercent)
 }
+
+func update(wg *sync.WaitGroup) {
+
+	fmt.Println("Start")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+
+	cli, err := client.NewEnvClient()
+	if err != nil {
+		panic(err)
+	}
+
+	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	wg.Add(len(containers))
+	wg.Done()
+
+	for _, container := range containers {
+		go func(container types.Container) {
+			stats, err := cli.ContainerStats(ctx, container.ID, true)
+			if err != nil {
+				panic(err)
+			}
+			s := &types.Stats{}
+
+			for {
+				select {
+				case <-ctx.Done():
+					stats.Body.Close()
+					wg.Done()
+					fmt.Println("Stop logging")
+					return
+				default:
+					if err := json.NewDecoder(stats.Body).Decode(&s); err == io.EOF {
+						return
+					} else if err != nil {
+						cancel()
+					}
+					memoryUsage.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Usage))
+					memoryLimit.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Limit))
+					cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(utils.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
+					fmt.Println(container.ID, s.CPUStats.CPUUsage.TotalUsage)
+				}
+			}
+		}(container)
+
+		//json.NewDecoder(stats.Body).Decode(s)
+
+		//memoryUsage.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Usage))
+		//memoryLimit.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Limit))
+		//cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(utils.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
+	}
+}
+
 func main() {
 
 	http.Handle("/metrics", promhttp.Handler())
 
+	wg := &sync.WaitGroup{}
 	go func() {
-			cli, err := client.NewEnvClient()
-			if err != nil {
-				panic(err)
-			}
-
-			ctx, cancel := context.WithCancel(context.Background())
-
-			containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
-			if err != nil {
-				panic(err)
-			}
-
-			for _, container := range containers {
-				go func(container types.Container) {
-					stats, err := cli.ContainerStats(ctx, container.ID, true)
-					if err != nil {
-						panic(err)
-					}
-					s := &types.Stats{}
-
-					for {
-						select {
-						case <-ctx.Done():
-							stats.Body.Close()
-							fmt.Println("Stop logging")
-							return
-						default:
-							if err := json.NewDecoder(stats.Body).Decode(&s); err == io.EOF {
-								return
-							} else if err != nil {
-								cancel()
-							}
-							memoryUsage.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Usage))
-							memoryLimit.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Limit))
-							cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(utils.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
-							fmt.Println(container.ID, s.CPUStats.CPUUsage.TotalUsage)
-						}
-					}
-				}(container)
-
-				//json.NewDecoder(stats.Body).Decode(s)
-
-				//memoryUsage.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Usage))
-				//memoryLimit.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Limit))
-				//cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(utils.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
-			}
+		for {
+			wg.Add(1)
+			go update(wg)
+			wg.Wait()
+		}
 	}()
 
 	err := http.ListenAndServe(":9101", nil)
