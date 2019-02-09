@@ -19,6 +19,7 @@ import (
 var (
 	namespace   = "docker"
 	labels      = []string{"container", "name", "project"}
+	refreshRateEnvName = "REFRESH_RATE"
 	memoryUsage = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: namespace,
 		Name:      "memory_usage_bytes",
@@ -40,10 +41,10 @@ var (
 )
 
 func GetRefreshRate() time.Duration {
-	if len(os.Getenv("REFRESH_RATE")) == 0 {
+	if len(os.Getenv(refreshRateEnvName)) == 0 {
 		return 1
 	}
-	i, err := strconv.Atoi(os.Getenv("REFRESH_RATE"))
+	i, err := strconv.Atoi(os.Getenv(refreshRateEnvName))
 	if err != nil {
 		panic(err)
 	}
