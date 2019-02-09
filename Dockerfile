@@ -15,5 +15,5 @@ FROM alpine
 
 COPY --from=builder /go/src/app/docker_stats_exporter /bin/docker_stats_exporter
 
-EXPOSE 9101
+EXPOSE 9100
 CMD /bin/docker_stats_exporter
