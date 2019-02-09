@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/Budry/prometheus-simple-docker-exporter/src/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,10 +16,10 @@ import (
 )
 
 var (
-	namespace   = "docker"
-	labels      = []string{"container", "name", "project"}
+	namespace          = "docker"
+	labels             = []string{"container", "name", "project"}
 	refreshRateEnvName = "REFRESH_RATE"
-	memoryUsage = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	memoryUsage        = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: namespace,
 		Name:      "memory_usage_bytes",
 		Help:      "Current memory usage in bytes.",
@@ -52,6 +51,21 @@ func GetRefreshRate() time.Duration {
 	return time.Duration(i)
 }
 
+func CalculateCPUPercentUnix(previousCPUStats types.CPUStats, actualCPUStates types.CPUStats) float64 {
+	var (
+		cpuPercent = 0.0
+		// calculate the change for the cpu usage of the container in between readings
+		cpuDelta = float64(actualCPUStates.CPUUsage.TotalUsage) - float64(previousCPUStats.CPUUsage.TotalUsage)
+		// calculate the change for the entire system between readings
+		systemDelta = float64(actualCPUStates.SystemUsage) - float64(previousCPUStats.SystemUsage)
+	)
+
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * float64(len(actualCPUStates.CPUUsage.PercpuUsage)) * 100.0
+	}
+	return cpuPercent
+}
+
 func init() {
 	prometheus.MustRegister(memoryUsage)
 	prometheus.MustRegister(memoryLimit)
@@ -60,7 +74,7 @@ func init() {
 
 func update(wg *sync.WaitGroup) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), GetRefreshRate() * time.Hour)
+	ctx, cancel := context.WithTimeout(context.Background(), GetRefreshRate()*time.Hour)
 
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -97,7 +111,7 @@ func update(wg *sync.WaitGroup) {
 					}
 					memoryUsage.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Usage))
 					memoryLimit.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Limit))
-					cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(utils.CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
+					cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
 				}
 			}
 		}(container)
