@@ -40,6 +40,9 @@ var (
 )
 
 func GetRefreshRate() time.Duration {
+	if len(os.Getenv("REFRESH_RATE")) == 0 {
+		return 1
+	}
 	i, err := strconv.Atoi(os.Getenv("REFRESH_RATE"))
 	if err != nil {
 		panic(err)
