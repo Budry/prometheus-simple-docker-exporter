@@ -3,16 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
