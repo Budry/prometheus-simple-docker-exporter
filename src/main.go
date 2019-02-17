@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -40,7 +41,7 @@ var (
 	)
 )
 
-func GetRefreshRate() time.Duration {
+func GetRefreshRate() int {
 	if len(os.Getenv(refreshRateEnvName)) == 0 {
 		return 1
 	}
@@ -49,7 +50,7 @@ func GetRefreshRate() time.Duration {
 		panic(err)
 	}
 
-	return time.Duration(i)
+	return i
 }
 
 func CalculateCPUPercentUnix(previousCPUStats types.CPUStats, actualCPUStates types.CPUStats) float64 {
@@ -75,7 +76,9 @@ func init() {
 
 func update(wg *sync.WaitGroup) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), GetRefreshRate()*time.Hour)
+	log.Println("Update container list")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(GetRefreshRate()) * time.Minute)
 
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -87,8 +90,13 @@ func update(wg *sync.WaitGroup) {
 		panic(err)
 	}
 
+	if len(containers) < 1 {
+		log.Println("No container sleep for " + strconv.Itoa(GetRefreshRate()) + " minutes")
+		cancel()
+		time.Sleep(time.Duration(GetRefreshRate()) * time.Minute)
+	}
+
 	wg.Add(len(containers))
-	wg.Done()
 
 	for _, container := range containers {
 		go func(container types.Container) {
@@ -102,6 +110,7 @@ func update(wg *sync.WaitGroup) {
 				select {
 				case <-ctx.Done():
 					stats.Body.Close()
+					log.Println("Stream for container " + container.Names[0] + " was closed")
 					wg.Done()
 					return
 				default:
@@ -110,6 +119,7 @@ func update(wg *sync.WaitGroup) {
 					} else if err != nil {
 						cancel()
 					}
+					log.Println("Collect metrics from container " + container.Names[0])
 					memoryUsage.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Usage))
 					memoryLimit.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(float64(s.MemoryStats.Limit))
 					cpuUsagePercent.WithLabelValues(container.ID, container.Names[0], container.Labels["com.docker.compose.project"]).Set(CalculateCPUPercentUnix(s.PreCPUStats, s.CPUStats))
@@ -117,6 +127,8 @@ func update(wg *sync.WaitGroup) {
 			}
 		}(container)
 	}
+
+	wg.Done()
 }
 
 func main() {
