@@ -76,7 +76,7 @@ func init() {
 
 func update(wg *sync.WaitGroup) {
 
-	log.Println("Update container list")
+	log.Println("Update container list for next " + strconv.Itoa(GetRefreshRate()) + " minutes")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(GetRefreshRate()) * time.Minute)
 
