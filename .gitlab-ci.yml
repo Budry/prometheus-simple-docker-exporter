@@ -1,0 +1,21 @@
+image: docker:stable
+
+services:
+  - docker:dind
+
+before_script:
+  - docker login $CI_REGISTRY -p $CI_REGISTRY_PASSWORD -u $CI_REGISTRY_USER
+
+build:
+  stage: build
+  script:
+    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+    - docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+
+build_arm:
+  stage: build
+  script:
+    - docker build -t ${CI_REGISTRY_IMAGE}/arm:${CI_COMMIT_TAG}
+    - docker push ${CI_REGISTRY_IMAGE}/arm:${CI_COMMIT_TAG}
+  tags:
+    - arm
