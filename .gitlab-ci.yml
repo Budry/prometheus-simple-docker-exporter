@@ -15,7 +15,7 @@ build:
 build_arm:
   stage: build
   script:
-    - docker build -t ${REPOSITORY_NAME}/arm:${CI_COMMIT_TAG:-devel} .
+    - docker build -t ${REPOSITORY_NAME}/arm:${CI_COMMIT_TAG:-devel} -f Dockerfile.arm .
     - docker push ${REPOSITORY_NAME}/arm:${CI_COMMIT_TAG:-devel}
   tags:
     - arm
