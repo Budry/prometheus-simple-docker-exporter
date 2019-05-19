@@ -9,13 +9,13 @@ before_script:
 build:
   stage: build
   script:
-    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
-    - docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}
+    - docker build -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG:-devel}
+    - docker push ${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG:-devel}
 
 build_arm:
   stage: build
   script:
-    - docker build -t ${CI_REGISTRY_IMAGE}/arm:${CI_COMMIT_TAG}
-    - docker push ${CI_REGISTRY_IMAGE}/arm:${CI_COMMIT_TAG}
+    - docker build -t ${CI_REGISTRY_IMAGE}/arm:${CI_COMMIT_TAG:-devel}
+    - docker push ${CI_REGISTRY_IMAGE}/arm:${CI_COMMIT_TAG:-devel}
   tags:
     - arm
