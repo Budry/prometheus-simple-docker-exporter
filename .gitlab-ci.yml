@@ -1,18 +1,19 @@
-image: docker:stable
-
-services:
-  - docker:dind
+#image: docker:stable
 
 before_script:
   - docker login -p ${DOCKER_LOGIN_PASSWORD} -u ${DOCKER_LOGIN_USER}
 
 build:
+  services:
+    - docker:dind
   stage: build
   script:
     - docker build -t ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel} .
     - docker push ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel}
 
 build_arm:
+  services:
+    - arm32v6/docker:dind
   stage: build
   script:
     - docker build -t ${REPOSITORY_NAME}/arm:${CI_COMMIT_TAG:-devel} -f Dockerfile.arm .
