@@ -16,7 +16,9 @@ build_arm:
     - arm32v6/docker:dind
   stage: build
   script:
-    - docker build -t ${REPOSITORY_NAME}/arm:${CI_COMMIT_TAG:-devel} -f Dockerfile.arm .
-    - docker push ${REPOSITORY_NAME}/arm:${CI_COMMIT_TAG:-devel}
+    - docker build -t ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel}-arm -f Dockerfile.arm .
+    - docker tag ${REPOSITORY_NAME}:arm
+    - docker push ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel}-arm
+    - docker push ${REPOSITORY_NAME}:arm
   tags:
     - arm
