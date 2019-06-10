@@ -30,3 +30,4 @@ build_arm:
     - docker push ${REPOSITORY_NAME}:arm
   tags:
     - arm
+    - free
