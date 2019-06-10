@@ -4,21 +4,29 @@ before_script:
   - docker login -p ${DOCKER_LOGIN_PASSWORD} -u ${DOCKER_LOGIN_USER}
 
 build:
+  image: docker:stable
   services:
     - docker:dind
   stage: build
+  only:
+    - tags
   script:
-    - docker build -t ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel} .
-    - docker push ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel}
+    - docker build -t ${REPOSITORY_NAME}:${CI_COMMIT_TAG} .
+    - docker tag ${REPOSITORY_NAME}:${CI_COMMIT_TAG} ${REPOSITORY_NAME}:latest
+    - docker push ${REPOSITORY_NAME}:${CI_COMMIT_TAG}
+    - docker push ${REPOSITORY_NAME}:latest
 
 build_arm:
+  image: arm32v6/docker:stable
   services:
     - arm32v6/docker:dind
   stage: build
+  only:
+    - tags
   script:
-    - docker build -t ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel}-arm -f Dockerfile.arm .
-    - docker tag ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel}-arm ${REPOSITORY_NAME}:arm
-    - docker push ${REPOSITORY_NAME}:${CI_COMMIT_TAG:-devel}-arm
+    - docker build -t ${REPOSITORY_NAME}:${CI_COMMIT_TAG}-arm -f Dockerfile.arm .
+    - docker tag ${REPOSITORY_NAME}:${CI_COMMIT_TAG}-arm ${REPOSITORY_NAME}:arm
+    - docker push ${REPOSITORY_NAME}:${CI_COMMIT_TAG}-arm
     - docker push ${REPOSITORY_NAME}:arm
   tags:
     - arm
